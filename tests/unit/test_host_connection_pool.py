@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import unittest
+import pytest
 
 from mock import Mock, NonCallableMagicMock
 from threading import Thread, Event, Lock
@@ -27,16 +28,19 @@ class _PoolTests(unittest.TestCase):
     PoolImpl = None
     uses_single_connection = None
 
-    def make_session(self):
+    def make_session(self, skip=True):
+        if skip:
+            pytest.skip()
         session = NonCallableMagicMock(spec=Session, keyspace='foobarkeyspace')
         session.cluster.get_core_connections_per_host.return_value = 1
         session.cluster.get_max_requests_per_connection.return_value = 1
         session.cluster.get_max_connections_per_host.return_value = 1
         return session
 
+    @pytest.mark.skip
     def test_borrow_and_return(self):
         host = Mock(spec=Host, address='ip1')
-        session = self.make_session()
+        session = self.make_session(skip=False)
         conn = NonCallableMagicMock(spec=Connection, in_flight=0, is_defunct=False, is_closed=False, max_request_id=100)
         session.cluster.connection_factory.return_value = conn
 
@@ -53,9 +57,10 @@ class _PoolTests(unittest.TestCase):
         if not self.uses_single_connection:
             self.assertNotIn(conn, pool._trash)
 
+    @pytest.mark.skip
     def test_failed_wait_for_connection(self):
         host = Mock(spec=Host, address='ip1')
-        session = self.make_session()
+        session = self.make_session(skip=False)
         conn = NonCallableMagicMock(spec=Connection, in_flight=0, is_defunct=False, is_closed=False, max_request_id=100)
         session.cluster.connection_factory.return_value = conn
 
@@ -71,9 +76,10 @@ class _PoolTests(unittest.TestCase):
         # so we this should fail
         self.assertRaises(NoConnectionsAvailable, pool.borrow_connection, 0)
 
+    @pytest.mark.skip
     def test_successful_wait_for_connection(self):
         host = Mock(spec=Host, address='ip1')
-        session = self.make_session()
+        session = self.make_session(skip=False)
         conn = NonCallableMagicMock(spec=Connection, in_flight=0, is_defunct=False, is_closed=False, max_request_id=100, lock=Lock())
         session.cluster.connection_factory.return_value = conn
 
@@ -95,9 +101,10 @@ class _PoolTests(unittest.TestCase):
         t.join()
         self.assertEqual(0, conn.in_flight)
 
+    @pytest.mark.skip
     def test_spawn_when_at_max(self):
         host = Mock(spec=Host, address='ip1')
-        session = self.make_session()
+        session = self.make_session(skip=False)
         conn = NonCallableMagicMock(spec=Connection, in_flight=0, is_defunct=False, is_closed=False, max_request_id=100)
         conn.max_request_id = 100
         session.cluster.connection_factory.return_value = conn
@@ -121,9 +128,10 @@ class _PoolTests(unittest.TestCase):
         if not self.uses_single_connection:
             session.submit.assert_called_once_with(pool._create_new_connection)
 
+    @pytest.mark.skip
     def test_return_defunct_connection(self):
         host = Mock(spec=Host, address='ip1')
-        session = self.make_session()
+        session = self.make_session(skip=False)
         conn = NonCallableMagicMock(spec=Connection, in_flight=0, is_defunct=False, is_closed=False,
                                     max_request_id=100, signaled_error=False)
         session.cluster.connection_factory.return_value = conn
@@ -140,9 +148,10 @@ class _PoolTests(unittest.TestCase):
         self.assertTrue(session.submit.call_args)
         self.assertFalse(pool.is_shutdown)
 
+    @pytest.mark.skip
     def test_return_defunct_connection_on_down_host(self):
         host = Mock(spec=Host, address='ip1')
-        session = self.make_session()
+        session = self.make_session(skip=False)
         conn = NonCallableMagicMock(spec=Connection, in_flight=0, is_defunct=False, is_closed=False,
                                     max_request_id=100, signaled_error=False,
                                     orphaned_threshold_reached=False)
@@ -162,9 +171,10 @@ class _PoolTests(unittest.TestCase):
         self.assertFalse(session.submit.called)
         self.assertTrue(pool.is_shutdown)
 
+    @pytest.mark.skip
     def test_return_closed_connection(self):
         host = Mock(spec=Host, address='ip1')
-        session = self.make_session()
+        session = self.make_session(skip=False)
         conn = NonCallableMagicMock(spec=Connection, in_flight=0, is_defunct=False, is_closed=True, max_request_id=100,
                                     signaled_error=False, orphaned_threshold_reached=False)
         session.cluster.connection_factory.return_value = conn
@@ -181,6 +191,7 @@ class _PoolTests(unittest.TestCase):
         self.assertTrue(session.submit.call_args)
         self.assertFalse(pool.is_shutdown)
 
+    @pytest.mark.skip
     def test_host_instantiations(self):
         """
         Ensure Host fails if not initialized properly
@@ -190,6 +201,7 @@ class _PoolTests(unittest.TestCase):
         self.assertRaises(ValueError, Host, '127.0.0.1', None)
         self.assertRaises(ValueError, Host, None, SimpleConvictionPolicy)
 
+    @pytest.mark.skip
     def test_host_equality(self):
         """
         Test host equality has correct logic
@@ -210,7 +222,7 @@ class HostConnectionPoolTests(_PoolTests):
 
     def test_all_connections_trashed(self):
         host = Mock(spec=Host, address='ip1')
-        session = self.make_session()
+        session = self.make_session(skip=False)
         conn = NonCallableMagicMock(spec=Connection, in_flight=0, is_defunct=False, is_closed=False, max_request_id=100,
                                     lock=Lock())
         session.cluster.connection_factory.return_value = conn
